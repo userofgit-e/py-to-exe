@@ -26,7 +26,7 @@ jobs:
           pip install pyinstaller
 
       - name: Build EXE
-        run: pyinstaller --onefile main.py
+        run: pyinstaller --onefile exif.py
 
       - name: Upload EXE
         uses: actions/upload-artifact@v4
