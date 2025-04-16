@@ -3,7 +3,7 @@ name: Build Python Script
 on:
   push:
     branches:
-      - main  # or your default branch
+      - main
 
 jobs:
   build:
@@ -16,12 +16,23 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'  # or whatever version you need
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run script
-        run: python exif.py
+      - name: Add sample image for testing
+        run: |
+          mkdir test_images
+          curl -o test_images/sample.jpg https://raw.githubusercontent.com/ianare/exif-samples/master/jpg/gps/DSCN0010.jpg
+
+      - name: Run EXIF script on test image
+        run: python exif.py test_images/sample.jpg --file
+
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: exif-output
+          path: exif_output.txt
