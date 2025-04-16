@@ -1,5 +1,4 @@
 # Disclaimer: This script is for educational purposes only.
-# Do not use against any photos that you don't own or have authorization to test. 
 
 #!/usr/bin/env python3
 
