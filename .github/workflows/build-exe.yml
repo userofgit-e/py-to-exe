@@ -23,7 +23,7 @@ jobs:
           if (Test-Path "requirements.txt") {
             pip install -r requirements.txt
           }
-          pip install pyinstaller
+          pip install pyinstaller pillow
 
       - name: Build EXE
         run: pyinstaller --onefile exif.py
