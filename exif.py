@@ -1,66 +1,75 @@
-import os 
 from PIL import Image
-import piexif
+from PIL.ExifTags import TAGS, GPSTAGS
+import sys
+import tkinter as tk
+from tkinter import filedialog
 
-def get_exif_data(image_path):
+
+def convert_decimal_degrees(degree, minutes, seconds, direction):
+    decimal_degrees = degree + minutes / 60 + seconds / 3600
+    if direction in ["S", "W"]:
+        decimal_degrees *= -1
+    return decimal_degrees
+
+
+def create_google_maps_url(gps_coords):
+    lat = convert_decimal_degrees(*gps_coords["lat"], gps_coords["lat_ref"])
+    lon = convert_decimal_degrees(*gps_coords["lon"], gps_coords["lon_ref"])
+    return f"https://maps.google.com/?q={lat},{lon}"
+
+
+def extract_exif_data(file_path):
+    gps_coords = {}
     try:
-        img = Image.open(image_path)
-        exif_data = piexif.load(img.info.get('exif', b''))
-        formatted_data = {}
+        image = Image.open(file_path)
+        print(f"\n{'='*20} {file_path} {'='*20}")
+        if image._getexif() is None:
+            print("No EXIF data found.")
+            return
+        for tag, value in image._getexif().items():
+            tag_name = TAGS.get(tag)
+            if tag_name == "GPSInfo":
+                for key, val in value.items():
+                    readable_key = GPSTAGS.get(key, key)
+                    print(f"{readable_key} - {val}")
+                    if readable_key == "GPSLatitude":
+                        gps_coords["lat"] = val
+                    elif readable_key == "GPSLongitude":
+                        gps_coords["lon"] = val
+                    elif readable_key == "GPSLatitudeRef":
+                        gps_coords["lat_ref"] = val
+                    elif readable_key == "GPSLongitudeRef":
+                        gps_coords["lon_ref"] = val
+            else:
+                print(f"{tag_name} - {value}")
 
-        # معلومات أساسية
-        zeroth_ifd = exif_data["0th"]
-        exif_ifd = exif_data["Exif"]
-        gps_ifd = exif_data["GPS"]
+        if gps_coords:
+            print("Google Maps URL:", create_google_maps_url(gps_coords))
 
-        # اسم الكاميرا
-        if piexif.ImageIFD.Make in zeroth_ifd:
-            formatted_data['Camera Make'] = zeroth_ifd[piexif.ImageIFD.Make].decode()
-        if piexif.ImageIFD.Model in zeroth_ifd:
-            formatted_data['Camera Model'] = zeroth_ifd[piexif.ImageIFD.Model].decode()
-
-        # وقت وتاريخ
-        if piexif.ExifIFD.DateTimeOriginal in exif_ifd:
-            formatted_data['Date Taken'] = exif_ifd[piexif.ExifIFD.DateTimeOriginal].decode()
-
-        # إعدادات التصوير
-        if piexif.ExifIFD.ExposureTime in exif_ifd:
-            formatted_data['Exposure Time'] = str(exif_ifd[piexif.ExifIFD.ExposureTime])
-        if piexif.ExifIFD.FNumber in exif_ifd:
-            formatted_data['Aperture'] = f"f/{exif_ifd[piexif.ExifIFD.FNumber][0] / exif_ifd[piexif.ExifIFD.FNumber][1]}"
-        if piexif.ExifIFD.ISOSpeedRatings in exif_ifd:
-            formatted_data['ISO'] = exif_ifd[piexif.ExifIFD.ISOSpeedRatings]
-
-        # الموقع الجغرافي
-        if gps_ifd:
-            def convert_to_degrees(value):
-                d, m, s = value
-                return d[0]/d[1] + m[0]/m[1]/60 + s[0]/s[1]/3600
-
-            lat = convert_to_degrees(gps_ifd[piexif.GPSIFD.GPSLatitude])
-            lat_ref = gps_ifd[piexif.GPSIFD.GPSLatitudeRef].decode()
-            lon = convert_to_degrees(gps_ifd[piexif.GPSIFD.GPSLongitude])
-            lon_ref = gps_ifd[piexif.GPSIFD.GPSLongitudeRef].decode()
-
-            if lat_ref == 'S': lat = -lat
-            if lon_ref == 'W': lon = -lon
-
-            formatted_data['GPS Latitude'] = lat
-            formatted_data['GPS Longitude'] = lon
-
-        return formatted_data
     except Exception as e:
-        return {"Error": str(e)}
+        print(f"Error reading {file_path}: {e}")
 
-def extract_from_directory(directory_path):
-    for filename in os.listdir(directory_path):
-        if filename.lower().endswith((".jpg", ".jpeg")):
-            path = os.path.join(directory_path, filename)
-            print(f"--- {filename} ---")
-            data = get_exif_data(path)
-            for key, value in data.items():
-                print(f"{key}: {value}")
-            print()
 
-# استخدام:
-extract_from_directory("path/to/your/images")
+def main():
+    # Ask for output destination
+    output_choice = input("Output destination:\n1 - File\n2 - Terminal\nEnter choice: ").strip()
+    if output_choice == "1":
+        sys.stdout = open("exif_output.txt", "w")
+
+    # Use a file dialog to choose images
+    tk.Tk().withdraw()
+    files = filedialog.askopenfilenames(title="Select image files", filetypes=[("Image Files", "*.jpg *.jpeg *.tiff")])
+
+    if not files:
+        print("No files selected.")
+        return
+
+    for file in files:
+        extract_exif_data(file)
+
+    if output_choice == "1":
+        sys.stdout.close()
+
+
+if __name__ == "__main__":
+    main()
