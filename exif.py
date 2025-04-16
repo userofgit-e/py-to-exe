@@ -1,15 +1,13 @@
-from PIL import Image
-from PIL.ExifTags import TAGS, GPSTAGS
 import sys
 import tkinter as tk
 from tkinter import filedialog
+from PIL import Image
+from PIL.ExifTags import TAGS, GPSTAGS
 
 
 def convert_decimal_degrees(degree, minutes, seconds, direction):
     decimal_degrees = degree + minutes / 60 + seconds / 3600
-    if direction in ["S", "W"]:
-        decimal_degrees *= -1
-    return decimal_degrees
+    return decimal_degrees * (-1 if direction in ["S", "W"] else 1)
 
 
 def create_google_maps_url(gps_coords):
@@ -51,25 +49,10 @@ def extract_exif_data(file_path):
 
 
 def main():
-    # Ask for output destination
-    output_choice = input("Output destination:\n1 - File\n2 - Terminal\nEnter choice: ").strip()
-    if output_choice == "1":
+    # Default to terminal output unless "--file" is passed
+    save_to_file = "--file" in sys.argv
+
+    if save_to_file:
         sys.stdout = open("exif_output.txt", "w")
 
-    # Use a file dialog to choose images
-    tk.Tk().withdraw()
-    files = filedialog.askopenfilenames(title="Select image files", filetypes=[("Image Files", "*.jpg *.jpeg *.tiff")])
-
-    if not files:
-        print("No files selected.")
-        return
-
-    for file in files:
-        extract_exif_data(file)
-
-    if output_choice == "1":
-        sys.stdout.close()
-
-
-if __name__ == "__main__":
-    main()
+    # Use file dialog if no files are passed via CLI
