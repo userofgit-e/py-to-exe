@@ -1,13 +1,13 @@
-name: Build EXE
+name: Build Python Script
 
 on:
   push:
-    paths:
-      - '**.py'
+    branches:
+      - main  # or your default branch
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -16,20 +16,12 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.11'  # or whatever version you need
 
       - name: Install dependencies
         run: |
-          if (Test-Path "requirements.txt") {
-            pip install -r requirements.txt
-          }
-          pip install pyinstaller pillow
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: Build EXE
-        run: pyinstaller --onefile exif.py
-
-      - name: Upload EXE
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-exe
-          path: dist/exif.exe
+      - name: Run script
+        run: python exif.py
